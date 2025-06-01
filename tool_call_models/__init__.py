@@ -1,9 +1,9 @@
 from .base import BaseToolCallModel
 from .home_balance import HomeBalance, HomeBalanceDetails
 from .paynet import (
-    GetSupplierByCategoryOptions,
-    GetSupplierByCategoryPayload,
-    GetSupplierByCategoryResponse,
+    CategoriesResponse,
+    SupplierFieldsResponse,
+    SupplierByCategoryResponse,
 )
 from .smartbazar import (
     Brand,

@@ -6,6 +6,5 @@ class BaseToolCallModel(ABC):
     """Base class for all models in the application."""
 
     @abstractmethod
-    def filter_for_llm(self) -> Dict[str, Any]:
+    def filter_for_llm(self) -> str:
         """Filter model for LLM."""
-        pass
