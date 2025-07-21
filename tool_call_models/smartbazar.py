@@ -36,7 +36,7 @@ class MainCategory(BaseModel):
 
 
 class Merchant(BaseModel):
-    id: Optional[int] = None
+    id: Optional[Union[int, str]] = None
     name: Optional[str] = None
     logo: Optional[str] = None
     type: Optional[Dict[str, Any]] = None
@@ -46,16 +46,26 @@ class Merchant(BaseModel):
 
 
 class Offer(BaseModel):
-    id: Optional[int] = None
-    original_price: Optional[int] = None
-    price: Optional[int] = None
-    three_month_price: Optional[int] = Field(default=None, alias="3_month_price")
-    six_month_price: Optional[int] = Field(default=None, alias="6_month_price")
-    nine_month_price: Optional[int] = Field(default=None, alias="9_month_price")
-    twelve_month_price: Optional[int] = Field(default=None, alias="12_month_price")
-    eighteen_month_price: Optional[int] = Field(default=None, alias="18_month_price")
+    id: Optional[Union[int, str]] = None
+    original_price: Optional[Union[str, int, float]] = None
+    price: Optional[Union[str, int, float]] = None
+    three_month_price: Optional[Union[str, int, float]] = Field(
+        default=None, alias="3_month_price"
+    )
+    six_month_price: Optional[Union[str, int, float]] = Field(
+        default=None, alias="6_month_price"
+    )
+    nine_month_price: Optional[Union[str, int, float]] = Field(
+        default=None, alias="9_month_price"
+    )
+    twelve_month_price: Optional[Union[str, int, float]] = Field(
+        default=None, alias="12_month_price"
+    )
+    eighteen_month_price: Optional[Union[str, int, float]] = Field(
+        default=None, alias="18_month_price"
+    )
     discount: Optional[bool] = None
-    discount_percent: Optional[int] = None
+    discount_percent: Optional[Union[str, int, float]] = None
     discount_start_at: Optional[Union[datetime, str]] = None
     discount_expire_at: Optional[Union[datetime, str]] = None
 
@@ -84,11 +94,13 @@ class Offer(BaseModel):
 
     def filter_for_llm(self):
         return {
-            "price": self.price,
-            "merchant": self.merchant.name,
-            "status": self.status,
-            "six_month_price": self.six_month_price,
-            "twelve_month_price": self.twelve_month_price,
+            "price": self.price if self.price else None,
+            "merchant": self.merchant.name if self.merchant else None,
+            "status": self.status if self.status else None,
+            "six_month_price": self.six_month_price if self.six_month_price else None,
+            "twelve_month_price": self.twelve_month_price
+            if self.twelve_month_price
+            else None,
         }
 
 
@@ -103,7 +115,7 @@ class Meta(BaseModel):
 
 
 class ProductItem(BaseModel):
-    id: Optional[int] = None
+    id: Optional[Union[int, str]] = None
     remote_id: Optional[str] = None
     name_ru: Optional[str] = None
     name_uz: Optional[str] = None
@@ -127,10 +139,10 @@ class ProductItem(BaseModel):
 
     def filter_for_llm(self):
         return {
-            "name_uz": self.name_uz,
-            "name_ru": self.name_ru,
+            "name_uz": self.name_uz if self.name_uz else None,
+            "name_ru": self.name_ru if self.name_ru else None,
             "offers": [x.filter_for_llm() for x in self.offers],
-            "brand": self.brand.name,
+            "brand": self.brand.name if self.brand else None,
         }
 
 
@@ -139,5 +151,5 @@ class SearchProductsResponse(BaseToolCallModel, BaseModel):
     meta: Optional[Meta] = None
 
     def filter_for_llm(self):
-        data = [x.filter_for_llm() for x in self.items]
+        data = [x.filter_for_llm() for x in self.items if self.items]
         return json.dumps(data, ensure_ascii=False, indent=2)

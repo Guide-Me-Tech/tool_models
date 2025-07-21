@@ -14,7 +14,7 @@ class HomeBalanceDetails(BaseModel):
 
     def filter_for_llm(self):
         return {
-            "balance": self.balance,
+            "balance": self.balance if self.balance else None,
         }
 
 

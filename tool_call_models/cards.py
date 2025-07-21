@@ -51,7 +51,7 @@ class Card(BaseModel):
         super().__init__(**data)
 
 
-class CardsBalanceResponse(BaseToolCallModel, BaseModel):
+class CardBalanceResponseBody(BaseToolCallModel, BaseModel):
     custNo: str
     phoneNumber: str
     firstname: str
@@ -79,6 +79,21 @@ class CardsBalanceResponse(BaseToolCallModel, BaseModel):
         )
 
 
+class CardsBalanceResponse(BaseToolCallModel, BaseModel):
+    body: List[CardBalanceResponseBody] = Field(
+        default_factory=[],
+        description="List of card balance responses",
+    )
+    status: Optional[Union[int, str]] = Field(..., description="Status code")
+    workflowId: Optional[str] = None
+
+    def filter_for_llm(self):
+        output = []
+        for card in self.body:
+            output.append(card.filter_for_llm())
+        return json.dumps(output, ensure_ascii=False, indent=2)
+
+
 class CardInfoByPhoneNumber(BaseModel):
     pan: str
     name: str
@@ -89,9 +104,6 @@ class CardInfoByPhoneNumber(BaseModel):
 class CardsByPhoneNumberResponse(BaseToolCallModel, BaseModel):
     cards: List[CardInfoByPhoneNumber]
 
-    def __init__(self, data):
-        super().__init__(cards=[CardInfoByPhoneNumber(**x) for x in data])
-
     def filter_for_llm(self):
         return json.dumps(
             [x.model_dump(by_alias=True) for x in self.cards],
@@ -100,10 +112,10 @@ class CardsByPhoneNumberResponse(BaseToolCallModel, BaseModel):
         )
 
 
-class CardInfoByCardNumberResponse(BaseToolCallModel, BaseModel):
+class CardInfoByCard(BaseToolCallModel, BaseModel):
     processingSystem: Optional[str] = None
     iconMini: Optional[str] = None
-    isFound: bool
+    isFound: Optional[bool] = None
     maskedPan: Optional[str] = None
     errorMessage: Optional[str] = None
     icon: Optional[str] = None
@@ -113,3 +125,12 @@ class CardInfoByCardNumberResponse(BaseToolCallModel, BaseModel):
 
     def filter_for_llm(self):
         return self.model_dump_json(exclude=["iconMini", "icon"], indent=2)
+
+
+class CardInfoByCardNumberResponse(BaseToolCallModel, BaseModel):
+    status: Optional[str] = None
+    workflowId: Optional[str] = None
+    body: Optional[CardInfoByCard] = None
+
+    def filter_for_llm(self):
+        return self.body.filter_for_llm() if self.body else self.status

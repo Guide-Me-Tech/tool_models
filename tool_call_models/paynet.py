@@ -5,8 +5,8 @@ import json
 
 
 class Category(BaseModel):
-    id: int
-    name: str
+    id: Union[int, str] = Field(default=0)
+    name: str = Field(default="")
     imagePath: Optional[str] = None
     s3Url: Optional[str] = None
 
@@ -18,10 +18,10 @@ class Category(BaseModel):
 
 
 class Supplier(BaseModel):
-    id: int
-    name: str
-    categoryId: int
-    s3Url: Optional[str] = None
+    id: Union[int, str] = Field(default=0)
+    name: str = Field(default="")
+    categoryId: Union[int, str] = Field(default=0)
+    s3Url: Optional[str] = Field(default="")
 
     def filter_for_llm(self):
         return {
@@ -42,10 +42,10 @@ class Value(BaseModel):
 
 
 class FieldOptions(BaseModel):
-    identName: str
-    name: str
-    order: int
-    type: str
+    identName: str = Field(default="")
+    name: str = Field(default="")
+    order: int = Field(default=0)
+    type: str = Field(default="")
     pattern: Optional[str] = None
     minValue: Optional[int] = None
     maxValue: Optional[int] = None
@@ -59,25 +59,27 @@ class FieldOptions(BaseModel):
             "name": self.name,
             "order": self.order,
             "type": self.type,
-            "pattern": self.pattern,
-            "minValue": self.minValue,
-            "maxValue": self.maxValue,
-            "fieldSize": self.fieldSize,
-            "isMain": self.isMain,
-            "valueList": [x.filter_for_llm() for x in self.valueList],
+            "pattern": self.pattern if self.pattern else None,
+            "minValue": self.minValue if self.minValue else None,
+            "maxValue": self.maxValue if self.maxValue else None,
+            "fieldSize": self.fieldSize if self.fieldSize else None,
+            "isMain": self.isMain if self.isMain else None,
+            "valueList": [x.filter_for_llm() for x in self.valueList]
+            if self.valueList
+            else [],
         }
 
 
 class Response(BaseModel):
     payload: List[Category] = Field(default_factory=list)
-    code: Optional[Union[int, str]] = None
+    code: Optional[Union[int, str]] = Field(default=None)
 
 
 class SuppliersField(Response):
-    checkUp: bool
-    checkUpWithResponse: bool
-    checkUpAfterPayment: bool
-    fieldList: List[FieldOptions]
+    checkUp: bool = Field(default=False)
+    checkUpWithResponse: bool = Field(default=False)
+    checkUpAfterPayment: bool = Field(default=False)
+    fieldList: List[FieldOptions] = Field(default_factory=list)
 
 
 class SupplierFieldsResponse(BaseToolCallModel, Response):
