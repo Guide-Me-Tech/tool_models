@@ -5,11 +5,15 @@ from .base import BaseToolCallModel
 
 class HomeBalanceDetails(BaseModel):
     balance: int
-    details: Dict[Union[str, int], Union[int, float, str]]
+    details: Dict[Union[str, int], Union[int, float, str]] = Field(default_factory=dict)
 
     def __init__(self, **data):
-        if "balance" in data:
+        if "balance" in data and data["balance"] is not None:
+            if isinstance(data["balance"], str):
+                data["balance"] = int(data["balance"])
             data["balance"] = data["balance"] // 100
+        else:
+            data["balance"] = 0
         super().__init__(**data)
 
     def filter_for_llm(self):

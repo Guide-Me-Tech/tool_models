@@ -8,9 +8,6 @@ import json
 class Brand(BaseModel):
     id: Optional[int] = None
     name: Optional[str] = None
-    name_ru: Optional[str] = None
-    name_uz: Optional[str] = None
-    default_lang: Optional[str] = None
 
 
 class MainCategoryParent(BaseModel):
@@ -71,7 +68,7 @@ class Offer(BaseModel):
 
     merchant: Optional[Merchant] = None
     status: Optional[Dict[str, Any]] = None
-    market_type: Optional[str] = Literal[
+    market_type: Optional[Literal[
         "b2c",
         "b2b",
         "B2B",
@@ -90,7 +87,7 @@ class Offer(BaseModel):
         "b2g",
         "g2g",
         "g2c",
-    ]
+    ]] = None
 
     def filter_for_llm(self):
         return {
@@ -114,23 +111,39 @@ class Meta(BaseModel):
     total: Optional[int] = Field(default=1, alias="total")
 
 
+class Installment(BaseModel):
+    period: Optional[int] = None
+    price: Optional[Union[str, int, float]] = None
+
+
+class Price(BaseModel):
+    is_active: Optional[bool] = None
+    original: Optional[Union[str, int, float]] = None
+    price: Optional[Union[str, int, float]] = None
+    monthly: Optional[Union[str, int, float]] = None
+    installments: Optional[list[Installment]] = None
+    def filter_for_llm(self):
+        return {
+            "original": self.original if self.original else None,
+            "price": self.price if self.price else None,
+            "monthly": self.monthly if self.monthly else None,
+            "installments": [x.model_dump() for x in self.installments] if self.installments else None,
+        }
+
 class ProductItem(BaseModel):
     id: Optional[Union[int, str]] = None
-    remote_id: Optional[str] = None
-    name_ru: Optional[str] = None
-    name_uz: Optional[str] = None
+    name: Optional[str] = None
     slug: Optional[str] = None
     brand: Optional[Brand] = None
-    main_categories: Optional[list[MainCategory]] = None
-    short_name_uz: Optional[str] = None
-    short_name_ru: Optional[str] = None
-    main_image: Optional[Dict[str, str]] = None
+    category: Optional[MainCategory] = None
+    short_name: Optional[str] = None
+    images: Optional[Dict[str, str | list[str]]] = None
     created_at: Optional[Union[datetime, str]] = None
     updated_at: Optional[Union[datetime, str]] = None
     count: Optional[int] = None
     tracking: Optional[bool] = None
     offers: Optional[list[Offer]] = None
-    status: Optional[Dict[str, Any]] = None
+    price: Optional[Price] = None
     view_count: Optional[int] = None
     order_count: Optional[int] = None
     like_count: Optional[int] = None
@@ -139,17 +152,16 @@ class ProductItem(BaseModel):
 
     def filter_for_llm(self):
         return {
-            "name_uz": self.name_uz if self.name_uz else None,
-            "name_ru": self.name_ru if self.name_ru else None,
-            "offers": [x.filter_for_llm() for x in self.offers],
+            "name": self.name if self.name else None,
             "brand": self.brand.name if self.brand else None,
+            "price": self.price.filter_for_llm() if self.price else None,
         }
 
 
 class SearchProductsResponse(BaseToolCallModel, BaseModel):
-    items: Optional[list[ProductItem]] = None
+    products: Optional[list[ProductItem]] = None
     meta: Optional[Meta] = None
 
     def filter_for_llm(self):
-        data = [x.filter_for_llm() for x in self.items if self.items]
+        data = [x.filter_for_llm() for x in self.products] if self.products else []
         return json.dumps(data, ensure_ascii=False, indent=2)

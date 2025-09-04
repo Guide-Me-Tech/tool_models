@@ -1,7 +1,14 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from typing import List, Union, Optional, Dict
+
 from .base import BaseToolCallModel
 import json
+
+# import override from typing_extensions or from typing package whichever is available
+try:
+    from typing_extensions import override
+except ImportError:
+    from typing import override
 
 
 class CardDetails(BaseModel):
@@ -15,10 +22,15 @@ class CardBalance(BaseModel):
     balance: Union[int, str] = Field(..., description="Balance in cents")
     status: int
 
-    def __init__(self, **data):
-        if isinstance(data.get("balance"), str):
-            data["balance"] = int(data["balance"]) // 100
-        super().__init__(**data)
+    @model_validator(mode="before")
+    def validate_balance(cls, values):
+        if isinstance(values.get("balance"), str) and len(values["balance"]) == 0:
+            print("balance is empty setting to 0")
+            values["balance"] = 0
+        if isinstance(values["balance"], str):
+            print("balance is string setting to 0")
+            values["balance"] = int(values["balance"])
+        return values
 
 
 class BankIcon(BaseModel):
@@ -62,32 +74,31 @@ class CardBalanceResponseBody(BaseToolCallModel, BaseModel):
     createdAt: str
     cardList: List[Card]
 
+    @override
     def filter_for_llm(self):
-        return json.dumps(
-            [
-                {
-                    "pan": card.pan,
-                    "balance": card.cardBalance.balance,
-                    "bankIssuer": card.bankIssuer,
-                    "processingSystem": card.processingSystem,
-                    "cardDetails": card.cardDetails.cardName,
-                }
-                for card in self.cardList
-            ],
-            ensure_ascii=False,
-            indent=2,
-        )
+        # print("Filter For LLM in CardBalanceResponseBody")
+        return [
+            {
+                "pan": card.pan,
+                "balance": card.cardBalance.balance,
+                "bankIssuer": card.bankIssuer,
+                "CardName": card.cardDetails.cardName,
+            }
+            for card in self.cardList
+        ]
 
 
 class CardsBalanceResponse(BaseToolCallModel, BaseModel):
     body: List[CardBalanceResponseBody] = Field(
-        default_factory=[],
+        default_factory=[],  # pyright: ignore[reportArgumentType]
         description="List of card balance responses",
     )
     status: Optional[Union[int, str]] = Field(..., description="Status code")
     workflowId: Optional[str] = None
 
+    @override
     def filter_for_llm(self):
+        # print("Filter For LLM in CardsBalanceResponse")
         output = []
         for card in self.body:
             output.append(card.filter_for_llm())
@@ -104,6 +115,7 @@ class CardInfoByPhoneNumber(BaseModel):
 class CardsByPhoneNumberResponse(BaseToolCallModel, BaseModel):
     cards: List[CardInfoByPhoneNumber]
 
+    @override
     def filter_for_llm(self):
         return json.dumps(
             [x.model_dump(by_alias=True) for x in self.cards],
@@ -123,14 +135,44 @@ class CardInfoByCard(BaseToolCallModel, BaseModel):
     errorCode: Optional[str] = None
     token: Optional[str] = None
 
+    @override
     def filter_for_llm(self):
-        return self.model_dump_json(exclude=["iconMini", "icon"], indent=2)
+        return self.model_dump_json(
+            exclude=["iconMini", "icon", "errorCode", "isFound", "errorMessage"],  # pyright: ignore[reportArgumentType]
+            indent=2,
+        )
 
 
 class CardInfoByCardNumberResponse(BaseToolCallModel, BaseModel):
     status: Optional[str] = None
     workflowId: Optional[str] = None
-    body: Optional[CardInfoByCard] = None
+    body: Optional[Union[CardInfoByCard, List[CardInfoByCard]]] = None
 
+    @override
     def filter_for_llm(self):
-        return self.body.filter_for_llm() if self.body else self.status
+        if isinstance(self.body, list):
+            return json.dumps(
+                [
+                    x.model_dump_json(
+                        exclude=[  # pyright: ignore[reportArgumentType]
+                            "iconMini",
+                            "icon",
+                            "errorCode",
+                            "isFound",
+                            "errorMessage",
+                        ],
+                        indent=2,
+                    )
+                    for x in self.body
+                ],
+                ensure_ascii=False,
+                indent=2,
+            )
+        return (
+            self.body.model_dump_json(
+                exclude=["iconMini", "icon", "errorCode", "isFound", "errorMessage"],  # pyright: ignore[reportArgumentType]
+                indent=2,
+            )
+            if self.body
+            else self.status
+        )
