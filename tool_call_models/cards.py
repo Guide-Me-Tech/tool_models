@@ -80,7 +80,7 @@ class CardBalanceResponseBody(BaseToolCallModel, BaseModel):
         return [
             {
                 "pan": card.pan,
-                "balance": card.cardBalance.balance,
+                "balance": int(card.cardBalance.balance) // 100,
                 "bankIssuer": card.bankIssuer,
                 "CardName": card.cardDetails.cardName,
             }
@@ -132,47 +132,34 @@ class CardInfoByCard(BaseToolCallModel, BaseModel):
     errorMessage: Optional[str] = None
     icon: Optional[str] = None
     fullName: Optional[str] = None
-    errorCode: Optional[str] = None
+    errorCode: Optional[Union[int, str]] = None
     token: Optional[str] = None
 
     @override
     def filter_for_llm(self):
-        return self.model_dump_json(
-            exclude=["iconMini", "icon", "errorCode", "isFound", "errorMessage"],  # pyright: ignore[reportArgumentType]
-            indent=2,
-        )
+        return {
+            "processingSystem": self.processingSystem,
+            "maskedPan": self.maskedPan,
+            "fullName": self.fullName,
+            "token": self.token,
+        }
 
 
 class CardInfoByCardNumberResponse(BaseToolCallModel, BaseModel):
-    status: Optional[str] = None
-    workflowId: Optional[str] = None
-    body: Optional[Union[CardInfoByCard, List[CardInfoByCard]]] = None
+    status: Optional[Union[int, str]] = None
+    workflowId: Optional[Union[int, str]] = None
+    body: Optional[List[CardInfoByCard]] = None
 
     @override
     def filter_for_llm(self):
-        if isinstance(self.body, list):
+        if self.body:
             return json.dumps(
-                [
-                    x.model_dump_json(
-                        exclude=[  # pyright: ignore[reportArgumentType]
-                            "iconMini",
-                            "icon",
-                            "errorCode",
-                            "isFound",
-                            "errorMessage",
-                        ],
-                        indent=2,
-                    )
-                    for x in self.body
-                ],
+                [card.filter_for_llm() for card in self.body],
                 ensure_ascii=False,
                 indent=2,
             )
-        return (
-            self.body.model_dump_json(
-                exclude=["iconMini", "icon", "errorCode", "isFound", "errorMessage"],  # pyright: ignore[reportArgumentType]
-                indent=2,
-            )
-            if self.body
-            else self.status
+        return json.dumps(
+            {"status": self.status, "workflowId": self.workflowId},
+            ensure_ascii=False,
+            indent=2,
         )
