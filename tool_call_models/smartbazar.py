@@ -142,6 +142,7 @@ class ProductItem(BaseModel):
     id: Optional[Union[int, str]] = None
     name: Optional[str] = None
     slug: Optional[str] = None
+    offer_id: Optional[int] = None
     brand: Optional[Brand] = None
     category: Optional[MainCategory] = None
     short_name: Optional[str] = None
@@ -181,6 +182,14 @@ class CartItemPrice(BaseModel):
     total_price: Optional[Union[str, int, float]] = None
     monthly: Optional[Union[str, int, float]] = None
 
+    def filter_for_llm(self):
+        return {
+            "quantity": self.quantity if self.quantity else None,
+            "original": self.original if self.original else None,
+            "total_price": self.total_price if self.total_price else None,
+            "monthly": self.monthly if self.monthly else None,
+        }
+
 
 class CartItem(BaseModel):
     offer_id: Optional[Union[int, str]] = None
@@ -188,7 +197,7 @@ class CartItem(BaseModel):
     name: Optional[str] = None
     slug: Optional[str] = None
     remote_id: Optional[str] = None
-    image: Optional[str] = None
+    image: Optional[str | Dict[str, str]] = None
     quantity: Optional[int] = None
     price: Optional[CartItemPrice] = None
 

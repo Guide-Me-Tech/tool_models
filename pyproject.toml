@@ -1,6 +1,6 @@
 [project]
 name = "tool_call_models"
-version = "0.1.32"
+version = "0.1.36"
 description = "A simple package of models used between two services in order to achieve SDUI widgets using LLMs."
 authors = [{ name="Aslon Khamidov", email="hamidovaslon1@gmail.com" }]
 readme = "README.md"

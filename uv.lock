@@ -916,7 +916,7 @@ wheels = [
 
 [[package]]
 name = "tool-call-models"
-version = "0.1.31"
+version = "0.1.35"
 source = { editable = "." }
 dependencies = [
     { name = "pydantic" },
